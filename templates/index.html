@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音频转文字工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <!-- 添加 favicon 引用 -->
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    
+    <!-- 引入外部CSS -->
+    <link rel="stylesheet" href="/static/styles.css">
+    
+    <!-- Tailwind配置（保留在HTML中，因使用CDN版本） -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36D399',
+                        neutral: '#F9FAFB',
+                        dark: '#1F2937'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="font-inter bg-neutral text-dark min-h-screen flex flex-col">
+    <!-- 导航栏 -->
+    <header class="bg-white shadow-md fixed top-0 left-0 right-0 z-50">
+        <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="w-10 h-10 rounded-lg bg-gradient-blue flex items-center justify-center text-white">
+                    <i class="fa fa-microphone-slash text-xl"></i>
+                </div>
+                <span class="text-xl font-bold">音频转文字工具</span>
+            </div>
+            <nav class="hidden md:flex items-center space-x-6">
+                <a href="#" class="text-dark/70 hover:text-primary font-medium transition-colors">主页</a>
+                <a href="#" class="text-dark/70 hover:text-primary font-medium transition-colors">帮助</a>
+                <a href="#" class="text-dark/70 hover:text-primary font-medium transition-colors">关于</a>
+            </nav>
+            <button class="md:hidden text-dark text-xl" id="menu-toggle">
+                <i class="fa fa-bars"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- 主内容 -->
+    <main class="flex-grow pt-20 pb-12">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-4xl mx-auto">
+                <!-- 标题区域 -->
+                <div class="text-center mb-12 mt-8">
+                    <h1 class="text-[clamp(1.8rem,3vw,2.5rem)] font-bold mb-4">简单高效的音频转文字</h1>
+                    <p class="text-dark/60">上传音频文件，一键转换为文字</p>
+                </div>
+                
+                <!-- 上传区域 -->
+                <div class="bg-white rounded-xl shadow-lg p-8 mb-8 border border-gray-100 transition-all duration-300 hover:shadow-xl">
+                    <div class="text-center mb-6">
+                        <div class="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fa fa-cloud-upload text-primary text-3xl"></i>
+                        </div>
+                        <h2 class="text-xl font-bold mb-2">上传音频文件</h2>
+                        <p class="text-dark/60">支持MP3、WAV、M4A等格式</p>
+                    </div>
+                    
+                    <!-- 文件上传 -->
+                    <div class="mb-6">
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer" id="upload-area">
+                            <input type="file" id="audio-file" accept="audio/wav, audio/mpeg, audio/flac" class="hidden">
+                            <label for="audio-file" class="cursor-pointer">
+                                <i class="fa fa-file-audio-o text-3xl text-gray-400 mb-3"></i>
+                                <p class="text-dark/70 mb-1">点击或拖拽文件到此处</p>
+                                <p class="text-sm text-dark/50">最大文件大小: 100MB</p>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- 音频信息 (初始隐藏) -->
+                    <div id="audio-info" class="hidden mb-6">
+                        <div class="bg-gray-50 rounded-lg p-4 flex items-center justify-between">
+                            <div class="flex items-center">
+                                <i class="fa fa-file-audio-o text-primary text-2xl mr-3"></i>
+                                <div>
+                                    <p class="font-medium" id="file-name">audio.mp3</p>
+                                    <p class="text-sm text-dark/60" id="file-size">2.4 MB</p>
+                                </div>
+                            </div>
+                            <button class="text-primary hover:text-primary/80 transition-colors" id="change-file">
+                                <i class="fa fa-refresh mr-1"></i> 更换文件
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 转录按钮 -->
+                    <div class="text-center">
+                        <button id="transcribe-btn" class="transcribe-btn px-8 py-3 bg-gradient-blue text-white rounded-lg shadow-lg hover:shadow-xl hover:bg-primary transition-all transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            <i class="fa fa-magic mr-2"></i> 开始转录
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 转录结果 -->
+                <div id="transcription-result" class="bg-white rounded-xl shadow-lg p-8 border border-gray-100 transition-all duration-300 hover:shadow-xl hidden">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-bold">转录结果</h2>
+                        <div class="flex space-x-2">
+                            <button id="copy-btn" class="p-2 text-dark/60 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors" title="复制">
+                                <i class="fa fa-copy"></i>
+                            </button>
+                            <button id="download-btn" class="p-2 text-dark/60 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors" title="下载">
+                                <i class="fa fa-download"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 结果内容 -->
+                    <div class="bg-gray-50 rounded-lg p-4 h-64 md:h-80 overflow-y-auto scrollbar-hide" id="transcription-content">
+                        <p class="text-dark/60 italic text-center">转录内容将显示在这里...</p>
+                    </div>
+                    
+                    <!-- 音频播放器 -->
+                    <div class="mt-6 pt-6 border-t border-gray-100">
+                        <h3 class="font-medium mb-3">原音频</h3>
+                        <audio id="audio-player" controls class="w-full"></audio>
+                    </div>
+                </div>
+                
+                <!-- 处理中状态 (初始隐藏) -->
+                <div id="processing-state" class="bg-white rounded-xl shadow-lg p-8 border border-gray-100 transition-all duration-300 hover:shadow-xl hidden">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 animate-spin">
+                            <i class="fa fa-circle-o-notch text-primary text-2xl"></i>
+                        </div>
+                        <h2 class="text-xl font-bold mb-2">正在转录...</h2>
+                        <p class="text-dark/60 mb-6">请稍候，这可能需要几分钟时间...</p>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div id="progress-bar" class="bg-primary h-2.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <p class="text-sm text-dark/60 mt-2" id="progress-text">0% 完成</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-white/70 py-8">
+        <div class="container mx-auto px-4 text-center">
+            <p>&copy; 2025 音频转文字工具. 保留所有权利.</p>
+        </div>
+    </footer>
+
+    <!-- 引入外部JS（放在body底部确保DOM加载完成） -->
+    <script src="/static/index.js"></script>
+</body>
+</html>
+    
